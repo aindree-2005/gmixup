@@ -31,11 +31,9 @@ def group_graphs_by_class(dataset):
     return class_graphs
 def plot_graphon(graphon, title, save_path):
     """
-    Plot a graphon in a paper-faithful way.
+    Plot a graphon
     """
-
     plt.figure(figsize=(5, 5))
-
     im = plt.imshow(
         graphon,
         cmap="viridis",
@@ -44,12 +42,10 @@ def plot_graphon(graphon, title, save_path):
         vmax=1.0,
         extent=[0, 1, 0, 1] # latent space [0,1] × [0,1]
     )
-
     plt.colorbar(im, fraction=0.046, pad=0.04)
     plt.xlabel("Latent node position (u)")
     plt.ylabel("Latent node position (v)")
     plt.title(title)
-
     plt.gca().set_aspect("equal", adjustable="box")
     plt.tight_layout()
     plt.savefig(save_path, dpi=300)
@@ -133,7 +129,7 @@ if __name__ == "__main__":
                         choices=["PROTEINS", "IMDB-BINARY", "REDDIT-BINARY","IMDB-MULTI"])
     parser.add_argument("--method", type=str, default="USVT")
     parser.add_argument("--threshold_usvt", type=float, default=1e-6)
-    parser.add_argument("--r", type=int, default=64,
+    parser.add_argument("--r", type=int, default=32,
                         help="Resolution of graphon")
     parser.add_argument("--out_dir", type=str, default=None)
     parser.add_argument(
