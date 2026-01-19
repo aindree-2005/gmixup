@@ -1,22 +1,22 @@
-from torch_geometric.nn import GINConv, global_mean_pool, JumpingKnowledge
+import torch
+import torch.nn.functional as F
 from torch.nn import Linear, Sequential, ReLU, BatchNorm1d as BN
-from math import ceil
-from torch_geometric.nn import DenseSAGEConv, dense_diff_pool, JumpingKnowledge
-import torch
-import torch.nn.functional as F
-from torch.nn import Linear
-from torch_geometric.nn import GCNConv, global_mean_pool, JumpingKnowledge
-import torch
-import torch.nn.functional as F
-from torch.nn import Linear
-from torch_geometric.nn import SAGEConv, global_mean_pool, JumpingKnowledge
-import torch
-import torch.nn.functional as F
-from torch_geometric.datasets import TUDataset
-from torch_geometric.data import DataLoader
-from torch_geometric.nn import GraphConv, TopKPooling
-from torch_geometric.nn import global_mean_pool as gap, global_max_pool as gmp
-from math import ceil
+
+from torch_geometric.nn import (
+    GCNConv,
+    GINConv,
+    GraphConv,
+    TopKPooling,
+    global_mean_pool,
+    global_mean_pool as gap,
+    global_max_pool as gmp,
+    DenseGraphConv,
+    dense_diff_pool,
+    dense_mincut_pool,
+    TransformerConv,
+)
+
+from torch_geometric.utils import to_dense_batch, to_dense_adj
 
 import torch
 import torch.nn.functional as F
@@ -166,6 +166,63 @@ class GMT(torch.nn.Module):
         x = F.relu(self.conv2(x, edge_index))
 
         x = global_mean_pool(x, batch)
+
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+
+        return F.log_softmax(x, dim=-1)
+
+class DiffPool(torch.nn.Module):
+    def __init__(self, num_features=1, num_classes=1, num_hidden=64, max_nodes=100):
+        super(DiffPool, self).__init__()
+        dim = num_hidden
+        self.max_nodes = max_nodes
+        # GNN for node embeddings
+        self.gnn_embed = DenseGraphConv(num_features, dim)
+        # GNN for assignment matrix
+        self.gnn_pool = DenseGraphConv(num_features, max_nodes)
+        self.fc1 = Linear(dim, dim)
+        self.fc2 = Linear(dim, num_classes)
+
+    def forward(self, x, edge_index, batch):
+        # Convert to dense
+        x, mask = to_dense_batch(x, batch)
+        adj = to_dense_adj(edge_index, batch)
+        # Compute embeddings and assignment
+        z = F.relu(self.gnn_embed(x, adj))
+        s = F.softmax(self.gnn_pool(x, adj), dim=-1)
+        # DiffPool
+        x, adj, link_loss, ent_loss = dense_diff_pool(z, adj, s, mask)
+        # Readout
+        x = x.mean(dim=1)
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+        return F.log_softmax(x, dim=-1)
+class MinCutPool(torch.nn.Module):
+    def __init__(self, num_features=1, num_classes=1, num_hidden=64, max_nodes=100):
+        super(MinCutPool, self).__init__()
+
+        dim = num_hidden
+        self.max_nodes = max_nodes
+
+        self.gnn_embed = DenseGraphConv(num_features, dim)
+        self.gnn_pool = DenseGraphConv(num_features, max_nodes)
+
+        self.fc1 = Linear(dim, dim)
+        self.fc2 = Linear(dim, num_classes)
+
+    def forward(self, x, edge_index, batch):
+        x, mask = to_dense_batch(x, batch)
+        adj = to_dense_adj(edge_index, batch)
+
+        z = F.relu(self.gnn_embed(x, adj))
+        s = F.softmax(self.gnn_pool(x, adj), dim=-1)
+
+        x, adj, mincut_loss, ortho_loss = dense_mincut_pool(
+            z, adj, s, mask
+        )
+
+        x = x.mean(dim=1)
 
         x = F.relu(self.fc1(x))
         x = self.fc2(x)
