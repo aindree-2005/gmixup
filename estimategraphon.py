@@ -36,8 +36,8 @@ def plot_graphon(graphon, title, save_path):
     plt.figure(figsize=(5, 5))
     im = plt.imshow(
         graphon,
-        cmap="viridis",
-        origin="lower",     
+        cmap="plasma",
+        origin="upper",     
         vmin=0.0,
         vmax=1.0,
         extent=[0, 1, 0, 1] # latent space [0,1] × [0,1]
@@ -57,8 +57,8 @@ def plot_stepfunc(stepfunc, title, save_path):
     plt.figure(figsize=(5, 5))
     im = plt.imshow(
         stepfunc,
-        cmap="viridis",
-        origin="lower",
+        cmap="plasma",
+        origin="upper",
         vmin=0.0,
         vmax=1.0,
         extent=[0, 1, 0, 1],
