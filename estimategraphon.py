@@ -126,7 +126,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--dataset", type=str, required=True,
-                        choices=["PROTEINS", "IMDB-BINARY", "REDDIT-BINARY","IMDB-MULTI"])
+                        choices=["PROTEINS", "IMDB-BINARY", "REDDIT-BINARY","IMDB-MULTI","MUTAG"])
     parser.add_argument("--method", type=str, default="USVT")
     parser.add_argument("--threshold_usvt", type=float, default=1e-6)
     parser.add_argument("--r", type=int, default=32,

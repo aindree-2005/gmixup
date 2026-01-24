@@ -10,7 +10,7 @@ from torch_geometric.datasets import TUDataset
 from torch_geometric.data import DataLoader
 from torch_geometric.utils import degree
 
-from models import GIN, GCN, TopKPool, GMT
+from models import GCN2, GIN, GCN, TopKPool, GMT
 def prepare_dataset_x(dataset):
     if dataset[0].x is None:
         max_degree = 0
@@ -84,6 +84,15 @@ def run_experiment(args):
         "GIN": lambda: GIN(num_features, num_classes, args.hidden_dim),
         "GCN": lambda: GCN(num_features, num_classes, args.hidden_dim),
         "TopKPool": lambda: TopKPool(num_features, num_classes, args.hidden_dim),
+        "GCN2":     lambda: GCN2(
+                num_features,
+                num_classes,
+                hidden_dim=64
+                num_layers=2,
+                alpha=0.1,
+                theta=0.5,
+                dropout=0.3
+            )
         #"GMT": lambda: GMT(num_features, num_classes, args.hidden_dim),
     }
 
@@ -165,7 +174,7 @@ if __name__ == "__main__":
         "--dataset",
         type=str,
         required=True,
-        choices=["PROTEINS", "IMDB-BINARY", "REDDIT-BINARY", "IMDB-MULTI"]
+        choices=["PROTEINS", "IMDB-BINARY", "REDDIT-BINARY", "IMDB-MULTI","MUTAG"]
     )
     parser.add_argument("--epochs", type=int, default=100)
     parser.add_argument("--batch_size", type=int, default=32)

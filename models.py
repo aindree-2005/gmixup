@@ -152,3 +152,47 @@ class GMT(torch.nn.Module):
         x = self.fc2(x)
 
         return F.log_softmax(x, dim=-1)
+from torch_geometric.nn import GCN2Conv, global_mean_pool
+class GCN2(torch.nn.Module):
+    def __init__(
+        self,
+        num_features,
+        num_classes,
+        hidden_dim=64,
+        num_layers=8,
+        alpha=0.1,
+        theta=0.5,
+        dropout=0.5
+    ):
+        super().__init__()
+
+        self.dropout = dropout
+        self.num_layers = num_layers
+        self.lin1 = Linear(num_features, hidden_dim)
+        self.lin2 = Linear(hidden_dim, num_classes)
+        self.convs = torch.nn.ModuleList()
+        for layer in range(num_layers):
+            self.convs.append(
+                GCN2Conv(
+                    hidden_dim,
+                    alpha=alpha,
+                    theta=theta,
+                    layer=layer + 1
+                )
+            )
+
+    def forward(self, data):
+        x, edge_index, batch = data.x, data.edge_index, data.batch
+        x = F.dropout(x, p=self.dropout, training=self.training)
+        x = F.relu(self.lin1(x))
+
+        x0 = x   
+        for conv in self.convs:
+            x = F.dropout(x, p=self.dropout, training=self.training)
+            x = F.relu(conv(x, x0, edge_index))
+        x = global_mean_pool(x, batch)
+
+        x = F.dropout(x, p=self.dropout, training=self.training)
+        x = self.lin2(x)
+
+        return F.log_softmax(x, dim=-1)
