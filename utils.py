@@ -128,78 +128,6 @@ def align_graphs(graphs: List[np.ndarray],
 
     return aligned_graphs, normalized_node_degrees, max_num, min_num
 
-
-
-def align_x_graphs(graphs: List[np.ndarray], node_x: List[np.ndarray], padding: bool = False, N: int = None) -> Tuple[List[np.ndarray], List[np.ndarray], int, int]:
-    """
-    Align multiple graphs by sorting their nodes by descending node degrees
-
-    :param graphs: a list of binary adjacency matrices
-    :param padding: whether padding graphs to the same size or not
-    :return:
-        aligned_graphs: a list of aligned adjacency matrices
-        normalized_node_degrees: a list of sorted normalized node degrees (as node distributions)
-    """
-    num_nodes = [graphs[i].shape[0] for i in range(len(graphs))]
-    max_num = max(num_nodes)
-    min_num = min(num_nodes)
-
-    aligned_graphs = []
-    normalized_node_degrees = []
-    for i in range(len(graphs)):
-        num_i = graphs[i].shape[0]
-
-        node_degree = 0.5 * np.sum(graphs[i], axis=0) + 0.5 * np.sum(graphs[i], axis=1)
-        node_degree /= np.sum(node_degree)
-        idx = np.argsort(node_degree)  # ascending
-        idx = idx[::-1]  # descending
-
-        sorted_node_degree = node_degree[idx]
-        sorted_node_degree = sorted_node_degree.reshape(-1, 1)
-
-        sorted_graph = copy.deepcopy(graphs[i])
-        sorted_graph = sorted_graph[idx, :]
-        sorted_graph = sorted_graph[:, idx]
-
-        node_x = copy.deepcopy( node_x )
-        sorted_node_x = node_x[ idx, :]
-
-        max_num = max(max_num, N)
-        # if max_num < N:
-        #     max_num = max(max_num, N)
-        if padding:
-            # normalized_node_degree = np.ones((max_num, 1)) / max_num
-            normalized_node_degree = np.zeros((max_num, 1))
-            normalized_node_degree[:num_i, :] = sorted_node_degree
-
-            aligned_graph = np.zeros((max_num, max_num))
-            aligned_graph[:num_i, :num_i] = sorted_graph
-
-            normalized_node_degrees.append(normalized_node_degree)
-            aligned_graphs.append(aligned_graph)
-
-            # added
-            aligned_node_x = np.zeros((max_num, 1))
-            aligned_node_x[:num_i, :] = sorted_node_x
-
-
-        else:
-            normalized_node_degrees.append(sorted_node_degree)
-            aligned_graphs.append(sorted_graph)
-
-        if N:
-            aligned_graphs = [aligned_graph[:N, :N] for aligned_graph in aligned_graphs]
-            normalized_node_degrees = normalized_node_degrees[:N]
-
-            #added
-            aligned_node_x = aligned_node_x[:N]
-
-    return aligned_graphs, aligned_node_x, normalized_node_degrees, max_num, min_num
-
-
-
-
-
 def two_graphons_mixup(two_graphons, la=0.5, num_sample=20):
 
     label = la * two_graphons[0][0] + (1 - la) * two_graphons[1][0]
@@ -231,45 +159,6 @@ def two_graphons_mixup(two_graphons, la=0.5, num_sample=20):
         
         # print(edge_index)
     return sample_graphs
-
-
-
-def two_x_graphons_mixup(two_x_graphons, la=0.5, num_sample=20):
-
-    label = la * two_x_graphons[0][0] + (1 - la) * two_x_graphons[1][0]
-    new_graphon = la * two_x_graphons[0][1] + (1 - la) * two_x_graphons[1][1]
-    new_x = la * two_x_graphons[0][2] + (1 - la) * two_x_graphons[1][2]
-
-    sample_graph_label = torch.from_numpy(label).type(torch.float32)
-    sample_graph_x = torch.from_numpy(new_x).type(torch.float32)
-    # print(new_graphon)
-
-    sample_graphs = []
-    for i in range(num_sample):
-
-        sample_graph = (np.random.rand(*new_graphon.shape) <= new_graphon).astype(np.int32)
-        sample_graph = np.triu(sample_graph)
-        sample_graph = sample_graph + sample_graph.T - np.diag(np.diag(sample_graph))
-
-        sample_graph = sample_graph[sample_graph.sum(axis=1) != 0]
-        sample_graph = sample_graph[:, sample_graph.sum(axis=0) != 0]
-
-        A = torch.from_numpy(sample_graph)
-        edge_index, _ = dense_to_sparse(A)
-
-        num_nodes = int(torch.max(edge_index)) + 1
-
-        pyg_graph = Data()
-        pyg_graph.y = sample_graph_label
-        pyg_graph.x = sample_graph_x
-        pyg_graph.edge_index = edge_index
-        pyg_graph.num_nodes = num_nodes
-        sample_graphs.append(pyg_graph)
-        
-        # print(edge_index)
-    return sample_graphs
-
-
 
 def graphon_mixup(dataset, la=0.5, num_sample=20):
     graphons = estimate_graphon(dataset, universal_svd)
@@ -356,31 +245,6 @@ def estimate_one_graphon(aligned_adj_list: List[np.ndarray], method="universal_s
         graphon = universal_svd(aligned_adj_list, threshold=0.2)
 
     return graphon
-
-
-
-def split_class_x_graphs(dataset):
-
-    y_list = []
-    for data in dataset:
-        y_list.append(tuple(data.y.tolist()))
-        # print(y_list)
-    num_classes = len(set(y_list))
-
-    all_graphs_list = []
-    all_node_x_list = []
-    for graph in dataset:
-        adj = to_dense_adj(graph.edge_index)[0].numpy()
-        all_graphs_list.append(adj)
-        all_node_x_list = [graph.x.numpy()]
-
-    class_graphs = []
-    for class_label in set(y_list):
-        c_graph_list = [all_graphs_list[i] for i in range(len(y_list)) if y_list[i] == class_label]
-        c_node_x_list = [all_node_x_list[i] for i in range(len(y_list)) if y_list[i] == class_label]
-        class_graphs.append( ( np.array(class_label), c_graph_list, c_node_x_list ) )
-
-    return class_graphs
 
 
 def split_class_graphs(dataset):

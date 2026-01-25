@@ -21,9 +21,6 @@ from utils import (
 
 from models import GIN, GCN, TopKPool
 
-
-# ---------- feature + label utils (UNCHANGED LOGIC) ----------
-
 def prepare_dataset_x(dataset):
     if dataset[0].x is None:
         max_degree = 0
