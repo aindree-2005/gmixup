@@ -270,11 +270,6 @@ def save_results(results, out_dir):
 
     print(f"\nSaved results to {path}")
 
-
-# ---------------------------
-# Entry
-# ---------------------------
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--epochs", type=int, default=100)
